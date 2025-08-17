@@ -3,6 +3,7 @@
 import math
 
 import torch
+import torch.nn as nn
 
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
@@ -11,15 +12,33 @@ import torch.nn.functional as F
 from GCNlayers import GraphConvolution
 from GCNmodel import GCN
 
+
 class Trainer:
-    def __init__(self, model, optimizer, criterion, device="cpu"):
+    def __init__(self, model, 
+                 optimizer, 
+                 criterion, 
+                 device="cpu"):
         self.model = model.to(device)
         self.optimizer = optimizer
         self.criterion = criterion
         self.device = device
+        self.criterion = nn.CrossEntropyLoss()
 
-    def crossEntropyLoss(self,yTrain,yTrue):
+    def crossEntropyLoss(self,yPred,yTrue):
+        '''
+        yPred : 预测值  yPred = [0,1,0,1,2,0,1,2,....]
+        yTrue : 真实值
+
+        这个损失函数是交叉熵损失函数
+        '''
+
+        # y_pred: [N, C] logits
+        # y_true: [N] int64 label
         
+        loss = self.criterion(yPred, yTrue) 
+        return loss
+    
+
     def train(self, data, epochs=100):
         self.model.train()
         data = data.to(self.device)

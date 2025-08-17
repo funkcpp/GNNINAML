@@ -86,6 +86,7 @@ class GCN(Module):
             ANorm = D_inv_sqrt @ adj @ D_inv_sqrt
 
         return ANorm
+    
 
     def forward(self, HMatrix):
         """
@@ -111,8 +112,6 @@ class GCN(Module):
             # 只要求最后一层是softmax输出
             else:
                 H = layer(H)
-                
-                H = torch.softmax(H, dim = -1)
         
         return H
 
