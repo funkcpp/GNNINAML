@@ -13,6 +13,10 @@ Note: There are subtle differences between the TensorFlow implementation in http
 
 This implementation makes use of the Cora dataset from [2].
 
+
+
+这个store主要是为了处理这样一个问题，对于图问题而言会存在着这样一种图：他们的节点数据会随着边的变化而变化，而且对于这种图往往我们是对其边的label进行分类任务。对于小图而言你可以将每条边做为虚拟节点，然后再构造新的包含这些虚拟节点的零阶矩阵，使用GCN来进行分类任务,也可以利用`PyG`的`NNConv`包将边数据导入进去。或者使用GTA可以直接将边的数据输入进去。而我们在这里提出一种全新的架构，利用信息流和GCN的概念，将每条边的信息定义为 起点信息和-终点信息和 。
+
 ## Installation
 
 ```python setup.py install```
