@@ -186,3 +186,25 @@ def print_detailed_metrics(metrics: Dict[str, Any], phase: str = "Test"):
         if metrics['true_positive'] + metrics['false_negative'] > 0:
             recall = metrics['true_positive'] / (metrics['true_positive'] + metrics['false_negative'])
             print(f"召回率(手动计算): {recall:.4f}")
+
+def train(
+        train_loader: DataLoader,
+        model: torch.nn.Module,
+        criterion: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        device: torch.device,
+        num_epochs: int
+):
+    for epoch in range(num_epochs):
+        train_loss, train_metric = train_model(
+            model=model,
+            data_loader=train_loader,
+            criterion=criterion,
+            optimizer=optimizer,
+            device=device
+        )
+
+
+        print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f}")
+
+        
