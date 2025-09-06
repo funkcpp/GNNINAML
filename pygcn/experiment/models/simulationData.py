@@ -193,6 +193,16 @@ def cat_int(x,nums_cat):
     x_int = np.floor(x_scaled).astype(int)
     return x_int
 
+def node_feat_creat(nums_node_feat,node_feat_dim):
+    # 随机生成节点特征
+    node_feat = {}
+    
+    for i in range(nums_node_feat):
+        feat = np.random.rand(1,node_feat_dim).squeeze()
+        node_feat[i] = feat
+    
+    return node_feat
+
 def simulationLinear(
         n_samples = 20000,
         nums_node = 1000,
@@ -204,7 +214,7 @@ def simulationLinear(
         random_state = 42,
         node_dims = 2,
         edge_cat_dims = 5,
-        edge_val_dims = 8,
+        edge_val_dims = 10,
         edge_cats = [10,10,10,10,10]
         ):
     '''
@@ -253,35 +263,51 @@ def simulationLinear(
     x_shuffled = shuffled_data(X,random_state = random_state)
 
     # 在这里我们将 x_shuffled 的前两维特征当作其节点的特征
-    node_feat,edge_cat_feat,edge_val_feat = [i for i in range(0,node_dims)], \
-                                            [i for i in range(node_dims,node_dims + edge_cat_dims)],\
-                                            [i for i in range(node_dims + edge_cat_dims,n_features)]
+    edge_cat_feat,edge_val_feat = [i for i in range(0,edge_cat_dims)], \
+                                    [i for i in range(edge_cat_dims,n_features)]
     # 确定边属性特征
     # 将每个边属性数据映射到对于属性区间内后取整
 
     for col in edge_cat_feat:
-        nums_cats = edge_cats[col - node_dims] # 得到对应每个属性数据的种类
+        nums_cats = edge_cats[col] # 得到对应每个属性数据的种类
         x_shuffled[:,col] = cat_int(x_shuffled[:,col],nums_cats)
     
     data_feat = pd.DataFrame(x_shuffled)
     # 重命名列名
     for col in range(len(data_feat.columns)):
-        if col in node_feat:
-            data_feat.rename(columns={col:f'node_feat_{col}'},inplace=True)
-        elif col in edge_cat_feat:
-            data_feat.rename(columns={col:f'edge_cat_feat_{col-node_dims}'},inplace=True)
+        if col in edge_cat_feat:
+            data_feat.rename(columns={col:f'edge_cat_feat_{col}'},inplace=True)
         elif col in edge_val_feat:
-            data_feat.rename(columns={col:f'edge_val_feat_{col-node_dims-edge_cat_dims}'},inplace=True)
+            data_feat.rename(columns={col:f'edge_val_feat_{col-edge_cat_dims}'},inplace=True)
 
     # 制造图结点数据
     start = np.random.randint(0,nums_node,size = n_samples)
     end = np.random.randint(0,nums_node,size = n_samples)
 
+    # 随机生成节点数据特征
+    node_feat_dic = node_feat_creat(nums_node_feat = nums_node,node_feat_dim = node_dims)
+    
+    # 构建节点特征
+    start_feat_data = pd.DataFrame([node_feat_dic[i] for i in start])
+
+    # 重命名
+    for col in range(len(start_feat_data.columns)):
+        start_feat_data.rename(columns={col:f'node_feat_start_{col}'},inplace=True)
+    
+    
+    end_feat_data = pd.DataFrame([node_feat_dic[i] for i in end])
+    # 重命名
+    for col in range(len(end_feat_data.columns)):
+        end_feat_data.rename(columns={col:f'node_feat_end_{col}'},inplace=True)
+    
+    node_feat_data = pd.concat([start_feat_data,end_feat_data],axis=1)
+
+    
     data_ = {'start' : start,
-             'end' : end}
+             'end' : end}   
     # 合并数据
-    data = pd.DataFrame( data = data_ )
-    data = pd.concat([data,data_feat],axis=1)
+    data = pd.DataFrame(data = data_ )
+    data = pd.concat([data,node_feat_data,data_feat],axis=1)
     
     data_loader = {
         'data' : data,
@@ -316,7 +342,7 @@ def y_label_simulate(
         node_hidden_dim = data_pram_dic['node_hidden_dim']
         node_output_dim = data_pram_dic['node_output_dim']
 
-        model_node = confuse_model[0](node_input_dim,
+        model_node = confuse_model[0](node_input_dim * 2,
                                       node_hidden_dim,
                                       node_output_dim,
                                       seed)
@@ -399,7 +425,7 @@ if __name__ == '__main__':
         random_state = 42,
         node_dims = 2,
         edge_cat_dims = 5, 
-        edge_val_dims = 8,
+        edge_val_dims = 10,
         edge_cats = [10,10,10,10,10]
     )
 
@@ -411,9 +437,9 @@ if __name__ == '__main__':
         'edge_cat_input_dim' : [10,10,10,10,10],
         'edge_cat_hidden_dim' : 20,
         'edge_cat_output_dim' : 20,
-        'edge_val_input_dim' : 8,
+        'edge_val_input_dim' : 10,
         'edge_val_hidden_dim' : 20,
-        'edge_val_output_dim' : 10,
+        'edge_val_output_dim' : 5,
         'edge_output_dim' : 10,
         'mlp_input_dim' : 15,
         'mlp_hidden_dim' : 20,

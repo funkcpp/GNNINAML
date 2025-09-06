@@ -20,7 +20,7 @@ class GCNWithEdge(nn.Module):
                  hiddenFeat,
                  outFeat,
                  embeddingDims = [20,20],
-                 fchidden = 32,
+                 fc_hidden = 32,
                  vdim = 2,
                  finalDim = 2,
                  dropout = 0.5):
@@ -33,10 +33,10 @@ class GCNWithEdge(nn.Module):
         # 构建处理属性数据层
         self.embeddingList = nn.ModuleList()
         for dim in embeddingDims:
-            self.embeddingList.append(nn.Embedding(dim, fchidden))
+            self.embeddingList.append(nn.Embedding(dim, fc_hidden))
         
         self.finalLayer = nn.Sequential(
-            nn.Linear(outFeat + len(embeddingDims)*fchidden + vdim, finalDim),
+            nn.Linear(outFeat + len(embeddingDims)*fc_hidden + vdim, finalDim),
             nn.ReLU(),
             nn.Dropout(dropout),    
             nn.Linear(finalDim, 2)  # 假设二分类问题
@@ -44,7 +44,21 @@ class GCNWithEdge(nn.Module):
     
     def forward(self, 
                 data):
+        ''' 
+        data = Data(
+        x = node_feat,
+        edge_index=edgeIndex,
+        edge_attr=torch.cat([edge_cat_feat, edge_val_feat], dim=1),
+        edge_cat = edge_cat_feat,
+        edge_val = edge_val_feat,
+        y=torch.tensor(data[y_label].values, dtype=torch.float)
+    )
+        '''
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+
+        edge_cat = data.edge_cat # [num_edge,num_cat_feat]
+        edge_val = data.edge_val # [num_edge,num_val_feat]
+
 
         # gcn得到节点特征
         x = self.conv1(x, edge_index)
@@ -57,15 +71,29 @@ class GCNWithEdge(nn.Module):
         node2Edge = x[start] - x[end]  #node2Edge : [num_edge,outFeat]
 
         # 提取属性数据
-        edgeAttr = edge_attr.T # edgeAttr : [num_edge, num_attr]
-        vlData = edgeAttr[:, :2].float()
+        
 
         for i in range(len(self.embeddingList)):
             emb = self.embeddingList[i]
-            vlData = torch.cat([vlData, emb(edgeAttr[:, i+2].long())], dim=1)
+            edge_val = torch.cat([edge_val, emb(edge_cat[:,i].long())], dim=1)
         
-        total = torch.cat([node2Edge, vlData], dim=1)
+        total = torch.cat([node2Edge, edge_val], dim=1)
 
         out = self.finalLayer(total)
 
-        return F.log_softmax(out, dim=1)
+        return out
+    
+if __name__ == '__main__':
+    path = 'D:/IBMAML/simulate_data.pt'
+    data = torch.load(path)
+    model = GCNWithEdge(inFeat=data.x.shape[1], 
+                        hiddenFeat=64, 
+                        outFeat=32, 
+                        embeddingDims=[10,10,10,10,10], 
+                        fc_hidden=32, 
+                        vdim=data.edge_val.shape[1], 
+                        finalDim=2, 
+                        dropout=0.5)
+    out = model(data)
+    print(out)
+

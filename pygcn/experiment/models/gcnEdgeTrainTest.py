@@ -206,5 +206,7 @@ def train(
 
 
         print(f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f}")
+        if epoch % 10 == 0:
+            print_detailed_metrics(train_metric, phase="Train")
 
         
